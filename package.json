@@ -1,0 +1,19 @@
+{
+  "name": "numberbluff-game",
+  "version": "1.0.0",
+  "description": "3~4인 전용 온라인 추리/심리전 보드게임 - 넘버 블러프",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "@upstash/redis": "^1.31.6"
+  },
+  "license": "MIT"
+}
