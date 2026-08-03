@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>넘버 블러프 - 온라인 추리 보드게임</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="toast" class="toast hidden"></div>
+
+<header class="app-header">
+  <h1>🔢 넘버 블러프</h1>
+  <div id="header-room-badge" class="room-badge hidden">
+    방 번호 <span id="header-room-code"></span>
+    <button id="copy-room-btn" class="mini-btn" title="방번호 복사">복사</button>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- 시작 화면 -->
+  <section id="screen-start" class="screen">
+    <div class="card">
+      <h2>닉네임을 입력하고 시작해줘</h2>
+      <input id="input-nickname" type="text" maxlength="12" placeholder="닉네임 (최대 12자)">
+
+      <div class="divider"></div>
+
+      <button id="btn-create-room" class="btn btn-primary btn-lg">방 만들기</button>
+
+      <div class="divider-text">또는</div>
+
+      <input id="input-room-code" type="text" inputmode="numeric" maxlength="4" placeholder="방번호 4자리 입력">
+      <button id="btn-join-room" class="btn btn-secondary btn-lg">방 입장하기</button>
+
+      <p id="start-error" class="error-text hidden"></p>
+    </div>
+  </section>
+
+  <!-- 로비 화면 -->
+  <section id="screen-lobby" class="screen hidden">
+    <div class="card">
+      <h2>로비</h2>
+      <p class="muted">플레이어가 3~4명 모이면 호스트가 게임을 시작할 수 있어.</p>
+      <div id="lobby-players" class="player-grid"></div>
+      <button id="btn-start-game" class="btn btn-primary btn-lg" disabled>게임 시작 (최소 3명 필요)</button>
+      <p id="lobby-wait-msg" class="muted hidden">호스트가 게임을 시작하길 기다리는 중...</p>
+    </div>
+  </section>
+
+  <!-- 게임 화면 -->
+  <section id="screen-game" class="screen hidden">
+
+    <div class="round-bar">
+      <span id="round-indicator">라운드 -/5</span>
+      <span id="phase-indicator" class="phase-badge">대기 중</span>
+      <span id="timer-indicator" class="timer-badge hidden">⏱ --</span>
+    </div>
+
+    <div id="players-strip" class="players-strip"></div>
+
+    <!-- 토큰 제출 -->
+    <div id="panel-tokens" class="card panel hidden">
+      <h3>토큰을 골라 비공개로 제출해!</h3>
+      <p class="muted">이미 사용한 숫자는 다시 낼 수 없어. 남은 숫자만 선택 가능해.</p>
+      <div id="token-buttons" class="token-buttons"></div>
+      <p id="token-status" class="muted"></p>
+    </div>
+
+    <!-- 힌트 & 예측 -->
+    <div id="panel-guess" class="card panel hidden">
+      <h3>힌트를 보고 합을 예측해봐</h3>
+      <ul id="hint-list" class="hint-list"></ul>
+      <p class="muted">힌트 3개 중 1개는 거짓이야. 잘 골라내봐!</p>
+      <div class="guess-input-row">
+        <input id="input-guess" type="number" placeholder="예측값 입력">
+        <button id="btn-submit-guess" class="btn btn-primary">제출</button>
+      </div>
+      <p id="guess-status" class="muted"></p>
+    </div>
+
+    <!-- 동점자 가위바위보 -->
+    <div id="panel-tiebreak" class="card panel hidden">
+      <h3>🤜🤛 동점자 가위바위보</h3>
+      <p id="tiebreak-message" class="muted"></p>
+      <div id="tiebreak-rps-buttons" class="rps-buttons hidden">
+        <button class="btn rps-btn" data-choice="rock">✊ 바위</button>
+        <button class="btn rps-btn" data-choice="paper">✋ 보</button>
+        <button class="btn rps-btn" data-choice="scissors">✌️ 가위</button>
+      </div>
+      <p id="tiebreak-status" class="muted"></p>
+    </div>
+
+    <!-- 라운드 결과 -->
+    <div id="panel-result" class="card panel hidden">
+      <h3>라운드 결과</h3>
+      <p id="result-sum" class="result-sum"></p>
+      <div id="result-hints" class="hint-list"></div>
+      <table id="result-table" class="result-table"></table>
+      <p class="muted">잠시 후 다음 라운드가 시작돼...</p>
+    </div>
+
+    <!-- 라운드 히스토리 -->
+    <details id="history-panel" class="card history-panel hidden">
+      <summary>이전 라운드 기록 보기</summary>
+      <div id="history-content"></div>
+    </details>
+
+  </section>
+
+  <!-- 게임 종료 화면 -->
+  <section id="screen-end" class="screen hidden">
+    <div class="card">
+      <h2>🏆 게임 종료</h2>
+      <div id="final-scoreboard" class="final-scoreboard"></div>
+      <div id="round-summary" class="round-summary"></div>
+      <button id="btn-rematch" class="btn btn-primary btn-lg hidden">다시하기</button>
+      <p id="rematch-wait-msg" class="muted hidden">호스트가 다시하기를 누르길 기다리는 중...</p>
+    </div>
+  </section>
+
+</main>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
