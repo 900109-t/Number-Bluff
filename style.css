@@ -174,14 +174,13 @@ input:focus { outline: none; border-color: var(--main); }
   margin-bottom: 12px;
   flex-wrap: wrap;
 }
-.phase-badge, .timer-badge {
+.phase-badge {
   background: var(--main-dark);
   color: white;
   padding: 5px 10px;
   border-radius: 20px;
   font-size: 0.8rem;
 }
-.timer-badge { background: var(--danger); }
 #round-indicator { font-weight: bold; color: var(--main-dark); }
 
 .players-strip {
@@ -259,6 +258,34 @@ input:focus { outline: none; border-color: var(--main); }
   font-size: 1rem;
 }
 .rps-btn:active { background: var(--main); color: white; }
+
+.rps-reveal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.rps-reveal-card {
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 8px;
+  text-align: center;
+  background: #fff;
+  animation: popIn 0.25s ease;
+}
+.rps-reveal-card .emoji { font-size: 2rem; display: block; margin-bottom: 6px; }
+.rps-reveal-card .name { font-size: 0.85rem; font-weight: bold; word-break: break-all; }
+.rps-reveal-card.win { border-color: #2ECC71; background: #EFFBF3; }
+.rps-reveal-card.lose { border-color: var(--danger); background: #FBEEEC; opacity: 0.75; }
+@keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.tiebreak-outcome {
+  text-align: center;
+  font-weight: bold;
+  color: var(--main-dark);
+  font-size: 1.05rem;
+  margin-top: 4px;
+}
 
 /* 결과 */
 .result-sum { font-size: 1.3rem; font-weight: bold; color: var(--main-dark); text-align: center; }
