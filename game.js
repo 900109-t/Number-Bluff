@@ -25,7 +25,6 @@
     guessDoneIds: [],
     tiebreakContestants: [],
     tiebreakMyChoice: null,
-    countdownTimer: null,
     history: [],
   };
 
@@ -52,25 +51,6 @@
     ['panel-tokens', 'panel-guess', 'panel-tiebreak', 'panel-result'].forEach((p) => {
       $(p).classList.toggle('hidden', p !== panelId);
     });
-  }
-
-  function startCountdown(deadlineTs, onTick) {
-    clearInterval(state.countdownTimer);
-    const badge = $('timer-indicator');
-    badge.classList.remove('hidden');
-    function tick() {
-      const remain = Math.max(0, Math.round((deadlineTs - Date.now()) / 1000));
-      badge.textContent = `⏱ ${remain}s`;
-      if (onTick) onTick(remain);
-      if (remain <= 0) clearInterval(state.countdownTimer);
-    }
-    tick();
-    state.countdownTimer = setInterval(tick, 1000);
-  }
-
-  function stopCountdown() {
-    clearInterval(state.countdownTimer);
-    $('timer-indicator').classList.add('hidden');
   }
 
   // ---------- 로컬 저장 ----------
@@ -184,6 +164,10 @@
   }
 
   // ---------- 동점 가위바위보 화면 ----------
+  const RPS_EMOJI = { rock: '✊', paper: '✋', scissors: '✌️' };
+  const RPS_BEATS = { rock: 'scissors', scissors: 'paper', paper: 'rock' };
+  const RPS_LABEL = { rock: '바위', paper: '보', scissors: '가위' };
+
   function renderTiebreakPanel(message) {
     setPanel('panel-tiebreak');
     $('phase-indicator').textContent = '동점 처리';
@@ -193,13 +177,47 @@
     $('tiebreak-status').textContent = amContestant
       ? (state.tiebreakMyChoice ? '선택 완료! 결과를 기다리는 중...' : '가위/바위/보 중 하나를 선택해줘.')
       : '동점자들이 가위바위보로 순위를 정하는 중이야...';
+    $('tiebreak-reveal-grid').classList.add('hidden');
+    $('tiebreak-outcome').classList.add('hidden');
+  }
+
+  function renderTiebreakReveal(choices) {
+    $('tiebreak-rps-buttons').classList.add('hidden');
+    $('tiebreak-status').textContent = '';
+
+    const shapesPresent = [...new Set(Object.values(choices))];
+    const isDraw = shapesPresent.length !== 2;
+    const winnerShape = isDraw ? null
+      : (RPS_BEATS[shapesPresent[0]] === shapesPresent[1] ? shapesPresent[0] : shapesPresent[1]);
+
+    const grid = $('tiebreak-reveal-grid');
+    grid.innerHTML = '';
+    state.tiebreakContestants.forEach((id) => {
+      const player = state.players.find((p) => p.id === id);
+      const choice = choices[id];
+      const div = document.createElement('div');
+      let cls = 'rps-reveal-card';
+      if (!isDraw) cls += choice === winnerShape ? ' win' : ' lose';
+      div.className = cls;
+      div.innerHTML = `
+        <span class="emoji">${RPS_EMOJI[choice] || '❓'}</span>
+        <span class="name">${escapeHtml(player ? player.nickname : '???')}${id === state.playerId ? ' (나)' : ''}</span>
+      `;
+      grid.appendChild(div);
+    });
+    grid.classList.remove('hidden');
+
+    const outcome = $('tiebreak-outcome');
+    outcome.textContent = isDraw
+      ? '🤝 무승부! 같은 사람들끼리 다시 대결해.'
+      : `${RPS_LABEL[winnerShape]} 승리! 진 사람은 그 아래 순위로 확정돼.`;
+    outcome.classList.remove('hidden');
   }
 
   // ---------- 라운드 결과 화면 ----------
   function renderResultPanel(payload) {
     setPanel('panel-result');
     $('phase-indicator').textContent = '라운드 결과';
-    stopCountdown();
     $('result-sum').textContent = `이번 라운드 실제 합: ${payload.sum}`;
 
     const hintsBox = $('result-hints');
@@ -413,7 +431,6 @@
     // usedTokens 목록은 서버가 개인별로 관리하므로, 버튼에서 개별 비활성화는
     // token_progress/round_result 데이터로 보정됨. 최초에는 tokensLeft로 유추.
     renderTokenPanelFromLeft(me ? me.tokensLeft : 5);
-    startCountdown(data.deadlineTs);
     if (state.round === 1) {
       state.history = [];
       $('history-panel').classList.add('hidden');
@@ -442,7 +459,6 @@
     state.guessDoneIds = [];
     $('input-guess').value = '';
     renderGuessPanel();
-    startCountdown(data.deadlineTs);
   });
 
   socket.on('guess_progress', (data) => {
@@ -472,8 +488,8 @@
     $('tiebreak-status').textContent = `${data.chosenCount}/${data.total}명 선택 완료...`;
   });
 
-  socket.on('tiebreak_reveal', () => {
-    $('tiebreak-status').textContent = '결과 확인 중...';
+  socket.on('tiebreak_reveal', (data) => {
+    renderTiebreakReveal(data.choices);
   });
 
   socket.on('tiebreak_redo', (data) => {
