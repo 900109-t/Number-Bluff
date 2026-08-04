@@ -258,9 +258,7 @@ function generateHints(sum) {
   return shuffle(hints);
 }
 
-// ---------- 라운드 진행 ----------
-const TOKEN_DEADLINE_MS = 25000;
-const GUESS_DEADLINE_MS = 20000;
+// ---------- 라운드 진행 (시간제한 없음, 전원 제출 시 자동 진행) ----------
 const TIEBREAK_STEP_DELAY_MS = 1600;
 
 function startRound(room) {
@@ -268,15 +266,11 @@ function startRound(room) {
   room.currentRound = emptyRound();
   room.phase = 'submitting_tokens';
   room.pendingRPS = null;
-  const deadlineTs = Date.now() + TOKEN_DEADLINE_MS;
   io.to(room.code).emit('round_start', {
     round: room.round,
     maxRounds: room.maxRounds,
-    deadlineTs,
     players: publicPlayers(room),
   });
-  clearRoomTimer(room);
-  room.timer = setTimeout(() => forceFinishTokenPhase(room), TOKEN_DEADLINE_MS);
   saveRoomToRedis(room);
 }
 
@@ -286,8 +280,11 @@ function unusedTokensFor(room, playerId) {
   return all.filter((t) => !used.includes(t));
 }
 
-function forceFinishTokenPhase(room) {
-  if (room.phase !== 'submitting_tokens') return;
+function connectedPlayers(room) {
+  return room.players.filter((p) => p.connected);
+}
+
+function autoFillTokens(room) {
   room.players.forEach((p) => {
     if (room.currentRound.tokens[p.id] === undefined) {
       const options = unusedTokensFor(room, p.id);
@@ -295,34 +292,26 @@ function forceFinishTokenPhase(room) {
       room.currentRound.tokens[p.id] = pick;
     }
   });
-  proceedToGuessPhase(room);
 }
 
-function proceedToGuessPhase(room) {
-  clearRoomTimer(room);
-  const sum = room.players.reduce((acc, p) => acc + room.currentRound.tokens[p.id], 0);
-  room.currentRound.sum = sum;
-  room.currentRound.hints = generateHints(sum);
-  room.phase = 'guessing';
-  const deadlineTs = Date.now() + GUESS_DEADLINE_MS;
-  io.to(room.code).emit('guess_phase', {
-    hints: room.currentRound.hints.map((h) => h.text),
-    deadlineTs,
-    submittedTokenPlayers: room.players.map((p) => p.id), // 모두 제출 완료 상태로 진입
-  });
-  room.timer = setTimeout(() => forceFinishGuessPhase(room), GUESS_DEADLINE_MS);
-  saveRoomToRedis(room);
-}
-
-function forceFinishGuessPhase(room) {
-  if (room.phase !== 'guessing') return;
+function autoFillGuesses(room) {
   const { min, max } = sumRange(room.players.length);
   room.players.forEach((p) => {
     if (room.currentRound.guesses[p.id] === undefined) {
       room.currentRound.guesses[p.id] = min + Math.floor(Math.random() * (max - min + 1));
     }
   });
-  finalizeRound(room);
+}
+
+function proceedToGuessPhase(room) {
+  const sum = room.players.reduce((acc, p) => acc + room.currentRound.tokens[p.id], 0);
+  room.currentRound.sum = sum;
+  room.currentRound.hints = generateHints(sum);
+  room.phase = 'guessing';
+  io.to(room.code).emit('guess_phase', {
+    hints: room.currentRound.hints.map((h) => h.text),
+  });
+  saveRoomToRedis(room);
 }
 
 function submittedCount(obj, players) {
@@ -591,7 +580,9 @@ io.on('connection', (socket) => {
       io.to(room.code).emit('token_progress', {
         submitted: Object.keys(room.currentRound.tokens),
       });
-      if (submittedCount(room.currentRound.tokens, room.players) === room.players.length) {
+      const conn = connectedPlayers(room);
+      if (submittedCount(room.currentRound.tokens, conn) === conn.length) {
+        autoFillTokens(room); // 연결이 끊긴 플레이어 몫은 자동으로 채워줌
         proceedToGuessPhase(room);
       } else {
         saveRoomToRedis(room);
@@ -618,7 +609,9 @@ io.on('connection', (socket) => {
       io.to(room.code).emit('guess_progress', {
         submitted: Object.keys(room.currentRound.guesses),
       });
-      if (submittedCount(room.currentRound.guesses, room.players) === room.players.length) {
+      const conn = connectedPlayers(room);
+      if (submittedCount(room.currentRound.guesses, conn) === conn.length) {
+        autoFillGuesses(room); // 연결이 끊긴 플레이어 몫은 자동으로 채워줌
         finalizeRound(room);
       } else {
         saveRoomToRedis(room);
